@@ -5,3 +5,7 @@ azure_dns_resource_group = "jacobnosal.com-dns"
 azure_dns_zone_name      = "jacobnosal.com"
 domain_name              = "api.jacobnosal.com"
 registration_email       = "jacobnosal@gmail.com"
+tags = {
+  environment = "demo"
+  demo_name   = "azure-monitor"
+}

@@ -55,8 +55,6 @@ resource "azurerm_subnet" "example" {
   resource_group_name  = azurerm_resource_group.vm_rg.name
   virtual_network_name = azurerm_virtual_network.example.name
   address_prefixes     = ["10.0.2.0/24"]
-
-  tags = var.tags
 }
 
 resource "azurerm_network_interface" "example" {
@@ -96,7 +94,7 @@ resource "azurerm_linux_virtual_machine" "example" {
   source_image_reference {
     publisher = "Canonical"
     offer     = "UbuntuServer"
-    sku       = "20.04-LTS"
+    sku       = "18.04-LTS"
     version   = "latest"
   }
 
@@ -104,27 +102,111 @@ resource "azurerm_linux_virtual_machine" "example" {
 }
 
 # TODO: azure monitor agent extension
-resource "azurerm_virtual_machine_extension" "example" {
-  name                 = "AzureMonitorAgent"
-  virtual_machine_id   = azurerm_linux_virtual_machine.example.id
-  publisher            = "Microsoft.Azure.Monitor"
-  type                 = "AzureMonitorLinuxAgent"
-  type_handler_version = "1.15"
-  tags                 = var.tags
+resource "azurerm_virtual_machine_extension" "azure_monitor_agent_extension" {
+  name                       = "AzureMonitorAgent"
+  virtual_machine_id         = azurerm_linux_virtual_machine.example.id
+  publisher                  = "Microsoft.Azure.Monitor"
+  type                       = "AzureMonitorLinuxAgent"
+  type_handler_version       = "1.15"
+  auto_upgrade_minor_version = true
+  automatic_upgrade_enabled  = false
+  tags                       = var.tags
 }
 
 # TODO: azure monitor dependency agent extension
-resource "azurerm_virtual_machine_extension" "example" {
+resource "azurerm_virtual_machine_extension" "azure_monitor_dependency_agent_extension" {
   name                       = "AzureMonitorDependencyAgent"
   virtual_machine_id         = azurerm_linux_virtual_machine.example.id
   publisher                  = "Microsoft.Azure.Monitoring.DependencyAgent"
   type                       = "DependencyAgentLinux"
   type_handler_version       = "9.5"
   auto_upgrade_minor_version = true
+  automatic_upgrade_enabled  = false
   tags                       = var.tags
 }
 
-# TODO: data collection rule
+# Microsoft.EnterpriseCloud.Monitoring.OmsAgentForLinux
+resource "azurerm_virtual_machine_extension" "oms_agent_linux_extension" {
+  name                       = "OMSAgentForLinux"
+  virtual_machine_id         = azurerm_linux_virtual_machine.example.id
+  publisher                  = "Microsoft.EnterpriseCloud.Monitoring"
+  type                       = "OmsAgentForLinux"
+  type_handler_version       = "1.14"
+  auto_upgrade_minor_version = true
+  automatic_upgrade_enabled  = false
+  tags                       = var.tags
 
+  settings = <<-BASE_SETTINGS
+  {
+    "workspaceId" : "${azurerm_log_analytics_workspace.law.workspace_id}"
+  }
+  BASE_SETTINGS
+
+  protected_settings = <<-PROTECTED_SETTINGS
+  {
+    "workspaceKey" : "${azurerm_log_analytics_workspace.law.primary_shared_key}"
+  }
+  PROTECTED_SETTINGS
+}
+
+# TODO: data collection rule
+resource "azurerm_monitor_data_collection_rule" "linux_vm" {
+  name                = "${azurerm_linux_virtual_machine.example.name}-dcr"
+  resource_group_name = azurerm_resource_group.vm_rg.name
+  location            = azurerm_resource_group.vm_rg.location
+  kind                = "Linux"
+
+  destinations {
+    log_analytics {
+      workspace_resource_id = azurerm_log_analytics_workspace.law.id
+      name                  = "logs_dest"
+    }
+
+    azure_monitor_metrics {
+      name = "metrics_dest"
+    }
+  }
+
+  data_flow {
+    streams      = ["Microsoft-InsightsMetrics"]
+    destinations = ["metrics_dest"]
+  }
+
+  data_flow {
+    streams      = ["Microsoft-InsightsMetrics", "Microsoft-Syslog", "Microsoft-Perf"]
+    destinations = ["logs_dest"]
+  }
+
+  data_sources {
+    syslog {
+      facility_names = ["*"]
+      log_levels     = ["*"]
+      name           = "source_syslog"
+    }
+
+    performance_counter {
+      streams                       = ["Microsoft-Perf", "Microsoft-InsightsMetrics"]
+      sampling_frequency_in_seconds = 10
+      counter_specifiers            = ["*"]
+      name                          = "source_perfcounter"
+    }
+  }
+
+  description = "data collection rule example"
+  tags        = var.tags
+  depends_on = [
+    azurerm_log_analytics_solution.law_s
+  ]
+}
 
 # TODO: data collection rule association
+resource "azapi_resource" "example_dcr_association" {
+  name      = "${azurerm_linux_virtual_machine.example.name}-dcr-assoc"
+  parent_id = azurerm_linux_virtual_machine.example.id
+  type      = "Microsoft.Insights/dataCollectionRuleAssociations@2021-04-01"
+  body = jsonencode({
+    properties = {
+      dataCollectionRuleId = azurerm_monitor_data_collection_rule.linux_vm.id
+    }
+  })
+}
