@@ -5,18 +5,18 @@ resource "azurerm_network_interface" "windows_vm_nic" {
 
   ip_configuration {
     name                          = "windows_vm_internal"
-    subnet_id                     = azurerm_subnet.example.id
+    subnet_id                     = azurerm_subnet.subnet.id
     private_ip_address_allocation = "Dynamic"
   }
 }
 
-resource "azurerm_windows_virtual_machine" "example" {
+resource "azurerm_windows_virtual_machine" "windows-vm" {
   name                = "windows-vm"
   resource_group_name = azurerm_resource_group.vm_rg.name
   location            = azurerm_resource_group.vm_rg.location
   size                = "Standard_F2"
   admin_username      = "adminuser"
-  admin_password      = "P@$$w0rd1234!"
+  admin_password      = random_password.windows_vm_admin_password.result
   network_interface_ids = [
     azurerm_network_interface.windows_vm_nic.id,
   ]
@@ -37,7 +37,7 @@ resource "azurerm_windows_virtual_machine" "example" {
 # TODO: azure monitor agent extension
 resource "azurerm_virtual_machine_extension" "azure_monitor_agent_windows_extension" {
   name                       = "AzureMonitorAgent"
-  virtual_machine_id         = azurerm_windows_virtual_machine.example.id
+  virtual_machine_id         = azurerm_windows_virtual_machine.windows-vm.id
   publisher                  = "Microsoft.Azure.Monitor"
   type                       = "AzureMonitorWindowsAgent"
   type_handler_version       = "1.2"
@@ -49,7 +49,7 @@ resource "azurerm_virtual_machine_extension" "azure_monitor_agent_windows_extens
 # TODO: azure monitor dependency agent extension
 resource "azurerm_virtual_machine_extension" "azure_monitor_windows_dependency_agent_extension" {
   name                       = "AzureMonitorDependencyAgent"
-  virtual_machine_id         = azurerm_windows_virtual_machine.example.id
+  virtual_machine_id         = azurerm_windows_virtual_machine.windows-vm.id
   publisher                  = "Microsoft.Azure.Monitoring.DependencyAgent"
   type                       = "DependencyAgentWindows"
   type_handler_version       = "9.10"
@@ -61,7 +61,7 @@ resource "azurerm_virtual_machine_extension" "azure_monitor_windows_dependency_a
 # Microsoft.EnterpriseCloud.Monitoring.OmsAgentForLinux
 resource "azurerm_virtual_machine_extension" "oms_agent_Windows_extension" {
   name                       = "Windows_MMA"
-  virtual_machine_id         = azurerm_windows_virtual_machine.example.id
+  virtual_machine_id         = azurerm_windows_virtual_machine.windows-vm.id
   publisher                  = "Microsoft.EnterpriseCloud.Monitoring"
   type                       = "MicrosoftMonitoringAgent"
   type_handler_version       = "1.0"
@@ -71,26 +71,26 @@ resource "azurerm_virtual_machine_extension" "oms_agent_Windows_extension" {
 
   settings = <<-BASE_SETTINGS
   {
-    "workspaceId" : "${azurerm_log_analytics_workspace.law.workspace_id}"
+    "workspaceId" : "${data.azurerm_log_analytics_workspace.law.workspace_id}"
   }
   BASE_SETTINGS
 
   protected_settings = <<-PROTECTED_SETTINGS
   {
-    "workspaceKey" : "${azurerm_log_analytics_workspace.law.primary_shared_key}"
+    "workspaceKey" : "${data.azurerm_log_analytics_workspace.law.primary_shared_key}"
   }
   PROTECTED_SETTINGS
 }
 
 # # TODO: data collection rule
 resource "azurerm_monitor_data_collection_rule" "windows_vm" {
-  name                = "${azurerm_windows_virtual_machine.example.name}-dcr"
+  name                = "${azurerm_windows_virtual_machine.windows-vm.name}-dcr"
   resource_group_name = azurerm_resource_group.vm_rg.name
   location            = azurerm_resource_group.vm_rg.location
 
   destinations {
     log_analytics {
-      workspace_resource_id = azurerm_log_analytics_workspace.law.id
+      workspace_resource_id = data.azurerm_log_analytics_workspace.law.id
       name                  = "logs_dest"
     }
 
@@ -136,8 +136,8 @@ resource "azurerm_monitor_data_collection_rule" "windows_vm" {
 }
 
 resource "azapi_resource" "windows_example_dcr_association" {
-  name      = "${azurerm_windows_virtual_machine.example.name}-dcr-assoc"
-  parent_id = azurerm_windows_virtual_machine.example.id
+  name      = "${azurerm_windows_virtual_machine.windows-vm.name}-dcr-assoc"
+  parent_id = azurerm_windows_virtual_machine.windows-vm.id
   type      = "Microsoft.Insights/dataCollectionRuleAssociations@2021-04-01"
   body = jsonencode({
     properties = {
