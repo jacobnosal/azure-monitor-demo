@@ -100,4 +100,16 @@ module "virtual_machines" {
   demo_resource_group_name       = azurerm_resource_group.demo_rg.name
   demo_network_name              = azurerm_virtual_network.network.name
   log_analytics_workspace_name   = azurerm_log_analytics_workspace.workspace.name
+
+  depends_on = [
+    azurerm_log_analytics_workspace.workspace,
+    azurerm_virtual_network.network,
+    azurerm_resource_group.monitoring_rg,
+    azurerm_resource_group.demo_rg
+  ]
+
+  providers = {
+    azapi = azapi
+    azurerm = azurerm
+   }
 }
