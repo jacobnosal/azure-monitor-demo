@@ -1,0 +1,16 @@
+name: push
+
+on: [push, pull_request]
+
+jobs:
+  delivery:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@main
+    - name: Lint Terraform
+      uses: actionshub/terraform-lint@main
+    - name: terraform-validate
+      uses: dflook/terraform-validate@v1.24.0
