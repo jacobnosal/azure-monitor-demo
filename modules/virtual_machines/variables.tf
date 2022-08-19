@@ -26,3 +26,8 @@ variable "log_analytics_workspace_name" {
 variable "tags" {
   description = "Tags for all resources."
 }
+
+variable "admin_ssh_key_file" {
+  description = "Filepath for admin ssh key."
+  type        = string
+}

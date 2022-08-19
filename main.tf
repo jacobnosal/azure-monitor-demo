@@ -100,6 +100,7 @@ module "virtual_machines" {
   demo_resource_group_name       = azurerm_resource_group.demo_rg.name
   demo_network_name              = azurerm_virtual_network.network.name
   log_analytics_workspace_name   = azurerm_log_analytics_workspace.workspace.name
+  admin_ssh_key_file             = var.admin_ssh_key_file
 
   depends_on = [
     azurerm_log_analytics_workspace.workspace,
