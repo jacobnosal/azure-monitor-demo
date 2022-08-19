@@ -11,6 +11,6 @@ jobs:
     - name: Check out code
       uses: actions/checkout@main
     - name: Lint Terraform
-      uses: actionshub/terraform-lint@main
-    - name: terraform-validate
+      uses: actionshub/terraform-lint@1.0.0
+    - name: Validate Terraform
       uses: dflook/terraform-validate@v1.24.0
