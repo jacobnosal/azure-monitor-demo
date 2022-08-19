@@ -15,19 +15,19 @@ resource "azurerm_log_analytics_workspace" "workspace" {
 }
 
 resource "azurerm_monitor_diagnostic_setting" "log_analytics_workspace_diagnostic_setting" {
-  name               = "${azurerm_log_analytics_workspace.workspace.name}-diagnostic-setting"
-  target_resource_id = azurerm_log_analytics_workspace.workspace.id
-  log_analytics_workspace_id = azurerm_log_analytics_workspace.workspace.id
+  name                           = "${azurerm_log_analytics_workspace.workspace.name}-diagnostic-setting"
+  target_resource_id             = azurerm_log_analytics_workspace.workspace.id
+  log_analytics_workspace_id     = azurerm_log_analytics_workspace.workspace.id
   log_analytics_destination_type = "Dedicated"
 
   dynamic "log" {
     for_each = data.azurerm_monitor_diagnostic_categories.log_analytics_workspace_diagnostic_catgeories.logs
     content {
       category = log.value
-      enabled = true
+      enabled  = true
       retention_policy {
         enabled = true
-        days = var.log_retention_in_days
+        days    = var.log_retention_in_days
       }
     }
   }
@@ -36,10 +36,10 @@ resource "azurerm_monitor_diagnostic_setting" "log_analytics_workspace_diagnosti
     for_each = data.azurerm_monitor_diagnostic_categories.log_analytics_workspace_diagnostic_catgeories.metrics
     content {
       category = metric.value
-      enabled = true
+      enabled  = true
       retention_policy {
         enabled = true
-        days = var.metric_retention_in_days
+        days    = var.metric_retention_in_days
       }
     }
   }
@@ -62,19 +62,19 @@ resource "azurerm_virtual_network" "network" {
 }
 
 resource "azurerm_monitor_diagnostic_setting" "network_diagnostic_setting" {
-  name               = "${azurerm_virtual_network.network.name}-diagnostic-setting"
-  target_resource_id = azurerm_virtual_network.network.id
-  log_analytics_workspace_id = azurerm_log_analytics_workspace.workspace.id
+  name                           = "${azurerm_virtual_network.network.name}-diagnostic-setting"
+  target_resource_id             = azurerm_virtual_network.network.id
+  log_analytics_workspace_id     = azurerm_log_analytics_workspace.workspace.id
   log_analytics_destination_type = "Dedicated"
 
   dynamic "log" {
     for_each = data.azurerm_monitor_diagnostic_categories.demo_network_diagnostic_catgeories.logs
     content {
       category = log.value
-      enabled = true
+      enabled  = true
       retention_policy {
         enabled = true
-        days = var.log_retention_in_days
+        days    = var.log_retention_in_days
       }
     }
   }
@@ -83,10 +83,10 @@ resource "azurerm_monitor_diagnostic_setting" "network_diagnostic_setting" {
     for_each = data.azurerm_monitor_diagnostic_categories.demo_network_diagnostic_catgeories.metrics
     content {
       category = metric.value
-      enabled = true
+      enabled  = true
       retention_policy {
         enabled = true
-        days = var.metric_retention_in_days
+        days    = var.metric_retention_in_days
       }
     }
   }
@@ -109,7 +109,7 @@ module "virtual_machines" {
   ]
 
   providers = {
-    azapi = azapi
+    azapi   = azapi
     azurerm = azurerm
-   }
+  }
 }
